@@ -24,7 +24,7 @@ Add `SimpleCSV` as a dependency in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(path: "../SimpleCSV")
+    .package(url: "https://github.com/davidthorn/SimpleCSV.git", branch: "main")
 ]
 ```
 
