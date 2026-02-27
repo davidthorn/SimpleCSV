@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "7073B230-F89C-4A1A-93F1-8ACE3E6C3384",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SimpleCSVTests",
+        "name" : "SimpleCSVTests"
+      }
+    }
+  ],
+  "version" : 1
+}
