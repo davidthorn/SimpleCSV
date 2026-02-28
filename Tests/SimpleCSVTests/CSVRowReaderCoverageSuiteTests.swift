@@ -53,6 +53,24 @@ struct CSVRowReaderCoverageSuiteTests {
         #expect(cell.value == "food.apple")
     }
 
+    @Test("typed column index returns matching cell")
+    func typedColumnIndexReturnsMatchingCell() throws {
+        let rowReader = CSVRowReader(row: makeRow(), fileName: "foods.csv")
+
+        let cell = try rowReader.cell(at: TypedCSVColumnIndex.name)
+        #expect(cell.columnIndex == 1)
+        #expect(cell.value == "Apple")
+    }
+
+    @Test("typed column name returns matching cell")
+    func typedColumnNameReturnsMatchingCell() throws {
+        let rowReader = CSVRowReader(row: makeRow(), fileName: "foods.csv")
+
+        let cell = try rowReader.cell(for: TypedCSVColumnName.foodID)
+        #expect(cell.columnIndex == 0)
+        #expect(cell.value == "food.apple")
+    }
+
     @Test("cell for missing column throws missing column error")
     func cellForMissingColumnThrowsMissingColumnError() {
         let rowReader = CSVRowReader(row: makeRow(), fileName: "foods.csv")

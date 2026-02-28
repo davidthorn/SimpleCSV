@@ -132,6 +132,28 @@ print(foodIDCell.value) // food.apple
 print(nameCell.value)   // Apple
 ```
 
+You can also avoid string and integer literals by using `RawRepresentable` enums:
+
+```swift
+enum FoodRow: Int {
+    case apple = 0
+}
+
+enum FoodColumnIndex: Int {
+    case foodID = 0
+    case name = 1
+}
+
+enum FoodColumnName: String {
+    case foodID = "food_id"
+    case name = "name"
+}
+
+let rowReader = try reader.rowReader(at: FoodRow.apple)
+let foodIDCell = try rowReader.cell(for: FoodColumnName.foodID)
+let nameCell = try rowReader.cell(at: FoodColumnIndex.name)
+```
+
 ### Row Index Semantics
 
 - `row(at: 0)` = first data row (header excluded)

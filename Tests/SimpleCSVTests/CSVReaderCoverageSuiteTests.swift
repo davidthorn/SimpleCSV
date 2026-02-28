@@ -175,6 +175,17 @@ struct CSVReaderCoverageSuiteTests {
         #expect(try reader.columnName(at: 2) == "calories")
     }
 
+    @Test("typed column index returns header value")
+    func typedColumnIndexReturnsHeaderValue() throws {
+        let reader = CSVReader(
+            header: ["food_id", "name", "calories"],
+            dataRows: [],
+            fileName: "foods.csv"
+        )
+
+        #expect(try reader.columnName(at: TypedCSVColumnIndex.name) == "name")
+    }
+
     @Test("columnName throws when no header is configured")
     func columnNameThrowsWhenNoHeaderIsConfigured() throws {
         let reader = try CSVReader(
@@ -207,6 +218,18 @@ struct CSVReaderCoverageSuiteTests {
         }
     }
 
+    @Test("typed column name returns matching index")
+    func typedColumnNameReturnsMatchingIndex() throws {
+        let reader = CSVReader(
+            header: ["food_id", "name", "calories"],
+            dataRows: [],
+            fileName: "foods.csv"
+        )
+
+        let index = try reader.index(for: TypedCSVColumnName.calories)
+        #expect(index == 2)
+    }
+
     @Test("row throws for invalid row index")
     func rowThrowsForInvalidRowIndex() {
         let reader = CSVReader(
@@ -234,6 +257,20 @@ struct CSVReaderCoverageSuiteTests {
         #expect(rowReader.row == row)
         #expect(rowReader.columnCount == 2)
         #expect(try rowReader.cell(for: "food_id").value == "food.apple")
+    }
+
+    @Test("typed row reader returns row reader with same row content")
+    func typedRowReaderReturnsRowReaderWithSameRowContent() throws {
+        let reader = CSVReader(
+            header: ["food_id", "name"],
+            dataRows: [["food.apple", "Apple"], ["food.banana", "Banana"]],
+            fileName: "foods.csv"
+        )
+
+        let rowReader = try reader.rowReader(at: TypedCSVRowIndex.second)
+
+        #expect(rowReader.row.rowIndex == 2)
+        #expect(try rowReader.cell(for: TypedCSVColumnName.name).value == "Banana")
     }
 
     @Test("index uses first duplicate header occurrence")

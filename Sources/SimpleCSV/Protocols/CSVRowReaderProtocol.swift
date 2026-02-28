@@ -21,3 +21,19 @@ public protocol CSVRowReaderProtocol: Sendable {
     /// Returns all cells for the row.
     func allCells() -> [CSVCell]
 }
+
+public extension CSVRowReaderProtocol {
+    /// Returns the cell at a typed zero-based column index.
+    /// - Parameter column: Enum-backed zero-based column index.
+    func cell<Column>(at column: Column) throws -> CSVCell
+    where Column: RawRepresentable, Column.RawValue == Int {
+        try cell(at: column.rawValue)
+    }
+
+    /// Returns the cell matching a typed column name.
+    /// - Parameter column: Enum-backed column name.
+    func cell<Column>(for column: Column) throws -> CSVCell
+    where Column: RawRepresentable, Column.RawValue == String {
+        try cell(for: column.rawValue)
+    }
+}
