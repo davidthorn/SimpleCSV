@@ -154,6 +154,45 @@ let foodIDCell = try rowReader.cell(for: FoodColumnName.foodID)
 let nameCell = try rowReader.cell(at: FoodColumnIndex.name)
 ```
 
+If you want `.case` syntax without repeating the enum type at each call site, bind the reader to a typed column enum:
+
+```swift
+enum FoodColumn: Int, CSVColumnProtocol {
+    case foodID = 0
+    case name = 1
+
+    var csvColumnName: String {
+        switch self {
+        case .foodID:
+            "food_id"
+        case .name:
+            "name"
+        }
+    }
+
+    var csvColumnIndex: Int {
+        rawValue
+    }
+}
+
+let foodReader = reader.typed(as: FoodColumn.self)
+let foodIDIndex = try foodReader.index(for: .foodID)
+let rowReader = try foodReader.rowReader(at: 0)
+let nameCell = try rowReader.cell(for: .name)
+```
+
+You can also iterate row readers directly:
+
+```swift
+for rowReader in try reader.rowReaders() {
+    print(try rowReader.cell(for: "name").value)
+}
+
+for rowReader in try foodReader.rowReaders() {
+    print(try rowReader.cell(for: .name).value)
+}
+```
+
 ### Row Index Semantics
 
 - `row(at: 0)` = first data row (header excluded)

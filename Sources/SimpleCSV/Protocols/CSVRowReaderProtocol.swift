@@ -23,6 +23,13 @@ public protocol CSVRowReaderProtocol: Sendable {
 }
 
 public extension CSVRowReaderProtocol {
+    /// Returns a typed adapter for column-safe row access.
+    /// - Parameter columnType: Concrete column enum type.
+    func typed<Column>(as columnType: Column.Type) -> TypedCSVRowReader<Column>
+    where Column: CSVColumnProtocol {
+        TypedCSVRowReader(rowReader: self)
+    }
+
     /// Returns the cell at a typed zero-based column index.
     /// - Parameter column: Enum-backed zero-based column index.
     func cell<Column>(at column: Column) throws -> CSVCell

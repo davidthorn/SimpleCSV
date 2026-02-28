@@ -273,6 +273,66 @@ struct CSVReaderCoverageSuiteTests {
         #expect(try rowReader.cell(for: TypedCSVColumnName.name).value == "Banana")
     }
 
+    @Test("rowReaders supports for in iteration")
+    func rowReadersSupportsForInIteration() throws {
+        let reader = CSVReader(
+            header: ["food_id", "name"],
+            dataRows: [
+                ["food.apple", "Apple"],
+                ["food.banana", "Banana"]
+            ],
+            fileName: "foods.csv"
+        )
+
+        var values: [String] = []
+
+        for rowReader in try reader.rowReaders() {
+            values.append(try rowReader.cell(for: "name").value)
+        }
+
+        #expect(values == ["Apple", "Banana"])
+    }
+
+    @Test("typed reader binds column enum for dot syntax access")
+    func typedReaderBindsColumnEnumForDotSyntaxAccess() throws {
+        let reader = CSVReader(
+            header: ["food_id", "name", "calories"],
+            dataRows: [["food.apple", "Apple", "95"]],
+            fileName: "foods.csv"
+        )
+
+        let foodReader = reader.typed(as: TypedCSVColumn.self)
+        let foodIDIndex = try foodReader.index(for: .foodID)
+        let nameHeader = try foodReader.columnName(for: .name)
+        let rowReader = try foodReader.rowReader(at: 0)
+        let caloriesCell = try rowReader.cell(for: .calories)
+
+        #expect(foodIDIndex == 0)
+        #expect(nameHeader == "name")
+        #expect(caloriesCell.value == "95")
+    }
+
+    @Test("typed rowReaders supports for in iteration")
+    func typedRowReadersSupportsForInIteration() throws {
+        let reader = CSVReader(
+            header: ["food_id", "name", "calories"],
+            dataRows: [
+                ["food.apple", "Apple", "95"],
+                ["food.banana", "Banana", "105"]
+            ],
+            fileName: "foods.csv"
+        )
+
+        let foodReader = reader.typed(as: TypedCSVColumn.self)
+        var values: [String] = []
+
+        for rowReader in try foodReader.rowReaders() {
+            values.append(try rowReader.cell(for: .name).value)
+        }
+
+        #expect(values == ["Apple", "Banana"])
+    }
+
     @Test("index uses first duplicate header occurrence")
     func indexUsesFirstDuplicateHeaderOccurrence() throws {
         let reader = CSVReader(

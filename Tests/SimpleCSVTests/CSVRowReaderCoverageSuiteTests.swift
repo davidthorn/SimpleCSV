@@ -71,6 +71,18 @@ struct CSVRowReaderCoverageSuiteTests {
         #expect(cell.value == "food.apple")
     }
 
+    @Test("typed row reader binds column enum for dot syntax access")
+    func typedRowReaderBindsColumnEnumForDotSyntaxAccess() throws {
+        let rowReader = CSVRowReader(row: makeRow(), fileName: "foods.csv")
+        let foodRowReader = rowReader.typed(as: TypedCSVColumn.self)
+
+        let nameCell = try foodRowReader.cell(for: .name)
+        let foodIDCell = try foodRowReader.cell(at: .foodID)
+
+        #expect(nameCell.value == "Apple")
+        #expect(foodIDCell.value == "food.apple")
+    }
+
     @Test("cell for missing column throws missing column error")
     func cellForMissingColumnThrowsMissingColumnError() {
         let rowReader = CSVRowReader(row: makeRow(), fileName: "foods.csv")

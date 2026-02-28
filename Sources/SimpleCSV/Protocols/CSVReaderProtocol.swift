@@ -31,6 +31,13 @@ public protocol CSVReaderProtocol: Sendable {
 }
 
 public extension CSVReaderProtocol {
+    /// Returns a typed adapter for column-safe access.
+    /// - Parameter columnType: Concrete column enum type.
+    func typed<Column>(as columnType: Column.Type) -> TypedCSVReader<Column>
+    where Column: CSVColumnProtocol {
+        TypedCSVReader(reader: self)
+    }
+
     /// Returns the header name at a typed zero-based column index.
     /// - Parameter column: Enum-backed zero-based column index.
     func columnName<Column>(at column: Column) throws -> String
@@ -57,5 +64,17 @@ public extension CSVReaderProtocol {
     func rowReader<Row>(at rowIndex: Row) throws -> CSVRowReaderProtocol
     where Row: RawRepresentable, Row.RawValue == Int {
         try rowReader(at: rowIndex.rawValue)
+    }
+
+    /// Returns row readers in data-row order for `for-in` iteration.
+    func rowReaders() throws -> CSVRowReaderSequence {
+        var rowReaders: [CSVRowReaderProtocol] = []
+        rowReaders.reserveCapacity(rowCount)
+
+        for index in 0..<rowCount {
+            rowReaders.append(try rowReader(at: index))
+        }
+
+        return CSVRowReaderSequence(rowReaders: rowReaders)
     }
 }
