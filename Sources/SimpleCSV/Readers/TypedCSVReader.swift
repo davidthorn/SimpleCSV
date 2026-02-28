@@ -79,4 +79,64 @@ where Column: CSVColumnProtocol {
     public func allRows() -> [CSVRow] {
         reader.allRows()
     }
+
+    /// Returns resolved header columns in header order.
+    public func headerColumns() throws -> [CSVHeaderColumn] {
+        try reader.headerColumns()
+    }
+
+    /// Returns resolved header columns, excluding the provided header names.
+    /// - Parameter excludedColumnNames: Header names to exclude.
+    public func headerColumns(excluding excludedColumnNames: [String]) throws -> [CSVHeaderColumn] {
+        try reader.headerColumns(excluding: excludedColumnNames)
+    }
+
+    /// Maps typed row readers in data-row order.
+    /// - Parameter transform: Transform applied to each typed row reader.
+    public func mapRows<Result>(
+        _ transform: (TypedCSVRowReader<Column>) throws -> Result
+    ) throws -> [Result] {
+        var results: [Result] = []
+        results.reserveCapacity(rowCount)
+
+        for rowReader in try rowReaders() {
+            results.append(try transform(rowReader))
+        }
+
+        return results
+    }
+
+    /// Compact-maps typed row readers in data-row order.
+    /// - Parameter transform: Transform applied to each typed row reader.
+    public func compactMapRows<Result>(
+        _ transform: (TypedCSVRowReader<Column>) throws -> Result?
+    ) throws -> [Result] {
+        var results: [Result] = []
+        results.reserveCapacity(rowCount)
+
+        for rowReader in try rowReaders() {
+            if let result = try transform(rowReader) {
+                results.append(result)
+            }
+        }
+
+        return results
+    }
+
+    /// Reduces typed row readers in data-row order into an accumulated result.
+    /// - Parameters:
+    ///   - initialResult: Initial accumulated result.
+    ///   - updateAccumulatingResult: Closure that mutates the accumulated result using each typed row reader.
+    public func reduceRows<Result>(
+        into initialResult: Result,
+        _ updateAccumulatingResult: (inout Result, TypedCSVRowReader<Column>) throws -> Void
+    ) throws -> Result {
+        var result = initialResult
+
+        for rowReader in try rowReaders() {
+            try updateAccumulatingResult(&result, rowReader)
+        }
+
+        return result
+    }
 }

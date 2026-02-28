@@ -31,6 +31,32 @@ public protocol CSVReaderProtocol: Sendable {
 }
 
 public extension CSVReaderProtocol {
+    /// Returns resolved header columns in header order.
+    func headerColumns() throws -> [CSVHeaderColumn] {
+        var columns: [CSVHeaderColumn] = []
+        columns.reserveCapacity(columnCount)
+
+        for index in 0..<columnCount {
+            columns.append(
+                CSVHeaderColumn(
+                    name: try columnName(at: index),
+                    index: index
+                )
+            )
+        }
+
+        return columns
+    }
+
+    /// Returns resolved header columns, excluding the provided header names.
+    /// - Parameter excludedColumnNames: Header names to exclude.
+    func headerColumns(excluding excludedColumnNames: [String]) throws -> [CSVHeaderColumn] {
+        let excludedNames = Set(excludedColumnNames)
+        return try headerColumns().filter { column in
+            excludedNames.contains(column.name) == false
+        }
+    }
+
     /// Returns a typed adapter for column-safe access.
     /// - Parameter columnType: Concrete column enum type.
     func typed<Column>(as columnType: Column.Type) -> TypedCSVReader<Column>
@@ -76,5 +102,54 @@ public extension CSVReaderProtocol {
         }
 
         return CSVRowReaderSequence(rowReaders: rowReaders)
+    }
+
+    /// Maps row readers in data-row order.
+    /// - Parameter transform: Transform applied to each row reader.
+    func mapRows<Result>(
+        _ transform: (CSVRowReaderProtocol) throws -> Result
+    ) throws -> [Result] {
+        var results: [Result] = []
+        results.reserveCapacity(rowCount)
+
+        for rowReader in try rowReaders() {
+            results.append(try transform(rowReader))
+        }
+
+        return results
+    }
+
+    /// Compact-maps row readers in data-row order.
+    /// - Parameter transform: Transform applied to each row reader.
+    func compactMapRows<Result>(
+        _ transform: (CSVRowReaderProtocol) throws -> Result?
+    ) throws -> [Result] {
+        var results: [Result] = []
+        results.reserveCapacity(rowCount)
+
+        for rowReader in try rowReaders() {
+            if let result = try transform(rowReader) {
+                results.append(result)
+            }
+        }
+
+        return results
+    }
+
+    /// Reduces row readers in data-row order into an accumulated result.
+    /// - Parameters:
+    ///   - initialResult: Initial accumulated result.
+    ///   - updateAccumulatingResult: Closure that mutates the accumulated result using each row reader.
+    func reduceRows<Result>(
+        into initialResult: Result,
+        _ updateAccumulatingResult: (inout Result, CSVRowReaderProtocol) throws -> Void
+    ) throws -> Result {
+        var result = initialResult
+
+        for rowReader in try rowReaders() {
+            try updateAccumulatingResult(&result, rowReader)
+        }
+
+        return result
     }
 }

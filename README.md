@@ -5,6 +5,10 @@
 It supports:
 - Parsing and encoding CSV/TSV/SSV/PSV
 - Header and row-width validation
+- Typed column-safe reader access
+- Header introspection via resolved column models
+- Sequence-based row iteration
+- Bulk row mapping, filtering, and reduction helpers
 - In-memory document editing with cell-level updates
 - Async streaming of persisted cell updates
 - Actor-based store concurrency
@@ -47,8 +51,11 @@ Main types:
 - `CSVCodec`: parse/encode raw separated text
 - `CSVStore`: actor for disk + in-memory document workflows
 - `CSVReaderProtocol`: read-only snapshot API
+- `TypedCSVReader`: typed adapter for column-safe access
 - `CSVRow`: pure row data model
 - `CSVRowReaderProtocol`: row lookup behavior (`cell(at:)`, `cell(for:)`)
+- `TypedCSVRowReader`: typed row adapter for `.case` cell access
+- `CSVHeaderColumn`: resolved header metadata (`name` + `index`)
 - `CSVCell`: mutable cell value with immutable identity metadata
 - `CSVReaderConfiguration`: validation behavior
 - `CSVStoreUpdate`: stream event payload
@@ -181,6 +188,20 @@ let rowReader = try foodReader.rowReader(at: 0)
 let nameCell = try rowReader.cell(for: .name)
 ```
 
+You can also introspect resolved headers:
+
+```swift
+let columns = try reader.headerColumns()
+// [CSVHeaderColumn(name: "food_id", index: 0), CSVHeaderColumn(name: "name", index: 1)]
+
+let valueColumns = try reader.headerColumns(excluding: ["food_id"])
+// [CSVHeaderColumn(name: "name", index: 1)]
+```
+
+This is useful when a file has a mixed schema:
+- fixed columns you know at compile time
+- dynamic columns only known from the header at runtime
+
 You can also iterate row readers directly:
 
 ```swift
@@ -190,6 +211,26 @@ for rowReader in try reader.rowReaders() {
 
 for rowReader in try foodReader.rowReaders() {
     print(try rowReader.cell(for: .name).value)
+}
+```
+
+And you can use the bulk row helpers on both `CSVReaderProtocol` and `TypedCSVReader`:
+
+```swift
+let names = try reader.mapRows { rowReader in
+    try rowReader.cell(for: "name").value
+}
+
+let highCalorieNames: [String] = try foodReader.compactMapRows { rowReader in
+    let calories = Int(try rowReader.cell(for: .calories).value) ?? 0
+    guard calories >= 100 else {
+        return nil
+    }
+    return try rowReader.cell(for: .name).value
+}
+
+let totalCalories = try foodReader.reduceRows(into: 0) { total, rowReader in
+    total += Int(try rowReader.cell(for: .calories).value) ?? 0
 }
 ```
 
@@ -319,7 +360,57 @@ let outputURL = URL(fileURLWithPath: "/path/to/export.csv")
 try await store.write(reader, to: outputURL)
 ```
 
-## 10. Error Handling Patterns
+## 10. Mixed Fixed and Dynamic Schema Example
+
+`SimpleCSV` works well for files where part of the schema is fixed and the rest is dynamic at runtime.
+
+For example, in a file like:
+
+```text
+food_id,protein,carbohydrate,fat
+food.apple,0.3,13.8,0.2
+```
+
+you might know `food_id` statically, but discover the nutrient columns from the header:
+
+```swift
+import SimpleCSV
+
+enum NutrientColumn: Int, CSVColumnProtocol {
+    case foodID = 0
+
+    var csvColumnName: String {
+        switch self {
+        case .foodID:
+            "food_id"
+        }
+    }
+
+    var csvColumnIndex: Int {
+        rawValue
+    }
+}
+
+let reader = try await store.read(from: fileURL)
+let typedReader = reader.typed(as: NutrientColumn.self)
+let foodIDIndex = try typedReader.index(for: .foodID)
+let nutrientColumns = try reader.headerColumns(excluding: [NutrientColumn.foodID.csvColumnName])
+
+let nutrientsByFoodID = try reader.reduceRows(into: [String: [String: String]]()) { result, rowReader in
+    let foodID = try rowReader.cell(at: foodIDIndex).value
+    var nutrientValues: [String: String] = [:]
+
+    for column in nutrientColumns {
+        nutrientValues[column.name] = try rowReader.cell(at: column.index).value
+    }
+
+    result[foodID] = nutrientValues
+}
+```
+
+That pattern avoids hard-coded column literals for the dynamic portion of the file while still giving typed access to the known columns.
+
+## 11. Error Handling Patterns
 
 ### Store Errors
 
@@ -360,7 +451,7 @@ do {
 }
 ```
 
-## 11. End-to-End Example
+## 12. End-to-End Example
 
 ```swift
 import Foundation
